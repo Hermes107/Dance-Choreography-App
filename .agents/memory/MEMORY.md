@@ -1,0 +1,1 @@
+- [Stagecraft coordinates](stagecraft-coordinate-conventions.md) — keep stage positions in pixel space across API, snapping, paths, and pointer conversion.

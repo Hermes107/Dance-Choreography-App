@@ -1,6 +1,6 @@
-# [Project name]
+# Stagecraft
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Stagecraft is a touch-first choreography workspace for mapping dancer formations and keyframed stage scenes.
 
 ## Run & Operate
 
@@ -22,15 +22,22 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/stagecraft/src/pages/workspace.tsx` — Milestone 1 workspace UI and stage interactions
+- `artifacts/stagecraft/src/index.css` — Stagecraft theme and stage canvas utilities
+- `lib/api-spec/openapi.yaml` — source of truth for the Stagecraft API contract
+- `artifacts/api-server/src/routes/stagecraft.ts` — project, dancer, and keyframe API routes
+- `lib/db/src/schema/` — Drizzle schema for projects, dancers, and keyframes
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Stagecraft is a responsive web app; native mobile packaging is out of scope for the current milestones.
+- Milestone 1 stores dancer positions as stage-space pixel coordinates, which keeps grid snapping and SVG transition paths in one coordinate system.
+- Keyframes own their dancer position snapshots; dancer metadata is shared at the project level.
+- The initial workspace is seeded with a small formation example when the project has no projects yet.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+Milestone 1 lets choreographers create projects, edit dancer tokens, drag tokens on a labeled stage grid, snap to a configurable grid, save formation keyframes, visualize movement paths from the previous keyframe, and duplicate, reorder, or delete scenes.
 
 ## User preferences
 
@@ -38,7 +45,8 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Run `pnpm --filter @workspace/api-spec run codegen` after changing `lib/api-spec/openapi.yaml`.
+- The API client compiler needs `dom.iterable` so generated `Headers.entries()` code typechecks.
 
 ## Pointers
 

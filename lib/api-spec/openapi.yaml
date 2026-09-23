@@ -10,6 +10,12 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: projects
+    description: Choreography projects and stage workspaces
+  - name: dancers
+    description: Dancer tokens belonging to a project
+  - name: keyframes
+    description: Formation scenes and token positions
 paths:
   /healthz:
     get:
@@ -24,7 +30,254 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List choreography projects
+      responses:
+        "200":
+          description: Projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Create a choreography project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectInput"
+      responses:
+        "201":
+          description: Created project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+  /projects/{projectId}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      summary: Get a choreography project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectWorkspace"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateProject
+      tags: [projects]
+      summary: Update a choreography project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectUpdate"
+      responses:
+        "200":
+          description: Updated project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /projects/{projectId}/dancers:
+    post:
+      operationId: createDancer
+      tags: [dancers]
+      summary: Add a dancer token to a project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DancerInput"
+      responses:
+        "201":
+          description: Created dancer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dancer"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /dancers/{dancerId}:
+    patch:
+      operationId: updateDancer
+      tags: [dancers]
+      summary: Update a dancer token
+      parameters:
+        - $ref: "#/components/parameters/DancerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DancerUpdate"
+      responses:
+        "200":
+          description: Updated dancer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dancer"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteDancer
+      tags: [dancers]
+      summary: Remove a dancer token
+      parameters:
+        - $ref: "#/components/parameters/DancerId"
+      responses:
+        "204":
+          description: Dancer removed
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /projects/{projectId}/keyframes:
+    post:
+      operationId: createKeyframe
+      tags: [keyframes]
+      summary: Create a formation keyframe
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KeyframeInput"
+      responses:
+        "201":
+          description: Created keyframe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Keyframe"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /keyframes/{keyframeId}:
+    patch:
+      operationId: updateKeyframe
+      tags: [keyframes]
+      summary: Update a formation keyframe
+      parameters:
+        - $ref: "#/components/parameters/KeyframeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KeyframeUpdate"
+      responses:
+        "200":
+          description: Updated keyframe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Keyframe"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteKeyframe
+      tags: [keyframes]
+      summary: Remove a formation keyframe
+      parameters:
+        - $ref: "#/components/parameters/KeyframeId"
+      responses:
+        "204":
+          description: Keyframe removed
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /keyframes/{keyframeId}/duplicate:
+    post:
+      operationId: duplicateKeyframe
+      tags: [keyframes]
+      summary: Duplicate a formation keyframe
+      parameters:
+        - $ref: "#/components/parameters/KeyframeId"
+      responses:
+        "201":
+          description: Duplicated keyframe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Keyframe"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /projects/{projectId}/keyframes/reorder:
+    post:
+      operationId: reorderKeyframes
+      tags: [keyframes]
+      summary: Reorder formation keyframes
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KeyframeReorderInput"
+      responses:
+        "200":
+          description: Reordered keyframes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Keyframe"
+        "404":
+          $ref: "#/components/responses/NotFound"
 components:
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DancerId:
+      name: dancerId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    KeyframeId:
+      name: keyframeId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +286,201 @@ components:
           type: string
       required:
         - status
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    Position:
+      type: object
+      properties:
+        dancerId:
+          type: string
+          format: uuid
+        x:
+          type: number
+        y:
+          type: number
+      required: [dancerId, x, y]
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        stageWidth:
+          type: number
+        stageHeight:
+          type: number
+        gridSize:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, name, stageWidth, stageHeight, gridSize, createdAt, updatedAt]
+    ProjectInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        stageWidth:
+          type: number
+          minimum: 200
+        stageHeight:
+          type: number
+          minimum: 200
+        gridSize:
+          type: number
+          minimum: 10
+      required: [name]
+    ProjectUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: ["string", "null"]
+        gridSize:
+          type: number
+          minimum: 10
+    Dancer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        initials:
+          type: string
+        color:
+          type: string
+        role:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, projectId, name, initials, color, createdAt]
+    DancerInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        initials:
+          type: string
+          minLength: 1
+          maxLength: 3
+        color:
+          type: string
+          pattern: "^#[0-9a-fA-F]{6}$"
+        role:
+          type: string
+      required: [name, initials, color]
+    DancerUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        initials:
+          type: string
+          minLength: 1
+          maxLength: 3
+        color:
+          type: string
+          pattern: "^#[0-9a-fA-F]{6}$"
+        role:
+          type: ["string", "null"]
+    Keyframe:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sortOrder:
+          type: integer
+        positions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Position"
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, projectId, name, sortOrder, positions, createdAt, updatedAt]
+    KeyframeInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        positions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Position"
+        notes:
+          type: string
+      required: [name, positions]
+    KeyframeUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        positions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Position"
+        notes:
+          type: ["string", "null"]
+    KeyframeReorderInput:
+      type: object
+      properties:
+        keyframeIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+      required: [keyframeIds]
+    ProjectWorkspace:
+      type: object
+      properties:
+        project:
+          $ref: "#/components/schemas/Project"
+        dancers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Dancer"
+        keyframes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Keyframe"
+      required: [project, dancers, keyframes]
 

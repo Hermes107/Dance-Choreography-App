@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Stagecraft"
+description = "A touch-first choreography planning workspace for choreographers and dance teachers to map formations, position dancers, and organize keyframed stage scenes."
+version = "1.0.0"
+id = "artifacts/stagecraft"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25265
+
+[services.development]
+run = "pnpm --filter @workspace/stagecraft run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/stagecraft", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/stagecraft/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25265"
+BASE_PATH = "/"
