@@ -9,10 +9,13 @@ import {
   CreateKeyframeResponse,
   CreateProjectBody,
   CreateProjectResponse,
+  DeleteAudioTrackParams,
   DeleteDancerParams,
   DeleteKeyframeParams,
   DuplicateKeyframeParams,
   DuplicateKeyframeResponse,
+  GetCountAnnotationsParams,
+  GetCountAnnotationsResponse,
   GetProjectParams,
   GetProjectResponse,
   ListProjectsResponse,
@@ -28,10 +31,18 @@ import {
   UpdateProjectBody,
   UpdateProjectParams,
   UpdateProjectResponse,
+  UpsertAudioTrackBody,
+  UpsertAudioTrackParams,
+  UpsertAudioTrackResponse,
+  UpsertCountAnnotationBody,
+  UpsertCountAnnotationParams,
+  UpsertCountAnnotationResponse,
 } from "@workspace/api-zod";
 import {
+  audioTracksTable,
   db,
   dancersTable,
+  countAnnotationsTable,
   keyframesTable,
   projectsTable,
   type Position,
@@ -172,7 +183,7 @@ router.get("/projects/:projectId", async (req, res): Promise<void> => {
     return;
   }
 
-  const [dancers, keyframes] = await Promise.all([
+  const [dancers, keyframes, audioTracks] = await Promise.all([
     db
       .select()
       .from(dancersTable)
@@ -183,10 +194,118 @@ router.get("/projects/:projectId", async (req, res): Promise<void> => {
       .from(keyframesTable)
       .where(eq(keyframesTable.projectId, project.id))
       .orderBy(asc(keyframesTable.sortOrder)),
+    db
+      .select()
+      .from(audioTracksTable)
+      .where(eq(audioTracksTable.projectId, project.id)),
   ]);
 
-  res.json(GetProjectResponse.parse({ project, dancers, keyframes }));
+  res.json(GetProjectResponse.parse({ project, dancers, keyframes, audioTrack: audioTracks[0] ?? null }));
 });
+
+router.put("/projects/:projectId/audio-track", async (req, res): Promise<void> => {
+  const parsedParams = UpsertAudioTrackParams.safeParse(req.params);
+  const parsedBody = UpsertAudioTrackBody.safeParse(req.body);
+  if (!parsedParams.success) {
+    res.status(400).json({ error: parsedParams.error.message });
+    return;
+  }
+  if (!parsedBody.success) {
+    res.status(400).json({ error: parsedBody.error.message });
+    return;
+  }
+
+  const [project] = await db
+    .select({ id: projectsTable.id })
+    .from(projectsTable)
+    .where(eq(projectsTable.id, parsedParams.data.projectId));
+  if (!project) {
+    res.status(404).json({ error: "Project not found" });
+    return;
+  }
+
+  const [audioTrack] = await db
+    .insert(audioTracksTable)
+    .values({ projectId: project.id, ...parsedBody.data })
+    .onConflictDoUpdate({
+      target: audioTracksTable.projectId,
+      set: { ...parsedBody.data, updatedAt: new Date() },
+    })
+    .returning();
+  res.json(UpsertAudioTrackResponse.parse(audioTrack));
+});
+
+router.delete("/projects/:projectId/audio-track", async (req, res): Promise<void> => {
+  const parsedParams = DeleteAudioTrackParams.safeParse(req.params);
+  if (!parsedParams.success) {
+    res.status(400).json({ error: parsedParams.error.message });
+    return;
+  }
+  await db
+    .delete(audioTracksTable)
+    .where(eq(audioTracksTable.projectId, parsedParams.data.projectId));
+  res.sendStatus(204);
+});
+
+router.get("/projects/:projectId/count-annotations", async (req, res): Promise<void> => {
+  const parsedParams = GetCountAnnotationsParams.safeParse(req.params);
+  if (!parsedParams.success) {
+    res.status(400).json({ error: parsedParams.error.message });
+    return;
+  }
+  const [project] = await db
+    .select({ id: projectsTable.id })
+    .from(projectsTable)
+    .where(eq(projectsTable.id, parsedParams.data.projectId));
+  if (!project) {
+    res.status(404).json({ error: "Project not found" });
+    return;
+  }
+  const annotations = await db
+    .select()
+    .from(countAnnotationsTable)
+    .where(eq(countAnnotationsTable.projectId, project.id))
+    .orderBy(asc(countAnnotationsTable.countNumber));
+  res.json(GetCountAnnotationsResponse.parse(annotations));
+});
+
+router.put(
+  "/projects/:projectId/count-annotations/:countNumber",
+  async (req, res): Promise<void> => {
+    const parsedParams = UpsertCountAnnotationParams.safeParse(req.params);
+    const parsedBody = UpsertCountAnnotationBody.safeParse(req.body);
+    if (!parsedParams.success) {
+      res.status(400).json({ error: parsedParams.error.message });
+      return;
+    }
+    if (!parsedBody.success) {
+      res.status(400).json({ error: parsedBody.error.message });
+      return;
+    }
+    const [project] = await db
+      .select({ id: projectsTable.id })
+      .from(projectsTable)
+      .where(eq(projectsTable.id, parsedParams.data.projectId));
+    if (!project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+
+    const [annotation] = await db
+      .insert(countAnnotationsTable)
+      .values({
+        projectId: project.id,
+        countNumber: parsedParams.data.countNumber,
+        data: parsedBody.data,
+      })
+      .onConflictDoUpdate({
+        target: [countAnnotationsTable.projectId, countAnnotationsTable.countNumber],
+        set: { data: parsedBody.data, updatedAt: new Date() },
+      })
+      .returning();
+    res.json(UpsertCountAnnotationResponse.parse(annotation));
+  },
+);
 
 router.patch("/projects/:projectId", async (req, res): Promise<void> => {
   const parsedParams = UpdateProjectParams.safeParse(req.params);
@@ -349,6 +468,7 @@ router.post(
         name: parsedBody.data.name,
         positions: parsedBody.data.positions as Position[],
         notes: parsedBody.data.notes,
+        countNumber: parsedBody.data.countNumber,
         sortOrder: (last?.sortOrder ?? -1) + 1,
       })
       .returning();
@@ -449,6 +569,7 @@ router.post(
           name: `${source.name} copy`,
           sortOrder: source.sortOrder + 1,
           positions: source.positions,
+          countNumber: source.countNumber,
           notes: source.notes,
         })
         .returning();

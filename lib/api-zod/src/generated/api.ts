@@ -90,6 +90,7 @@ export const GetProjectResponse = zod.object({
   "initials": zod.string(),
   "color": zod.string(),
   "role": zod.string().nullish(),
+  "groupName": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })),
   "keyframes": zod.array(zod.object({
@@ -97,6 +98,7 @@ export const GetProjectResponse = zod.object({
   "projectId": zod.string().uuid(),
   "name": zod.string(),
   "sortOrder": zod.number().int(),
+  "countNumber": zod.number().int().nullable(),
   "positions": zod.array(zod.object({
   "dancerId": zod.string().uuid(),
   "x": zod.number(),
@@ -105,7 +107,17 @@ export const GetProjectResponse = zod.object({
   "notes": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
-}))
+})),
+  "audioTrack": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "projectId": zod.string().uuid(),
+  "fileName": zod.string(),
+  "durationSeconds": zod.number(),
+  "bpm": zod.number(),
+  "startOffsetSeconds": zod.number(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),zod.null()])
 })
 
 
@@ -140,6 +152,159 @@ export const UpdateProjectResponse = zod.object({
 
 
 /**
+ * @summary Save project audio metadata
+ */
+export const UpsertAudioTrackParams = zod.object({
+  "projectId": zod.coerce.string().uuid()
+})
+
+
+export const upsertAudioTrackBodyDurationSecondsMin = 0;
+
+export const upsertAudioTrackBodyBpmMin = 30;
+export const upsertAudioTrackBodyBpmMax = 300;
+
+export const upsertAudioTrackBodyStartOffsetSecondsMin = 0;
+
+
+
+export const UpsertAudioTrackBody = zod.object({
+  "fileName": zod.string().min(1),
+  "durationSeconds": zod.number().min(upsertAudioTrackBodyDurationSecondsMin),
+  "bpm": zod.number().min(upsertAudioTrackBodyBpmMin).max(upsertAudioTrackBodyBpmMax),
+  "startOffsetSeconds": zod.number().min(upsertAudioTrackBodyStartOffsetSecondsMin)
+})
+
+export const UpsertAudioTrackResponse = zod.object({
+  "id": zod.string().uuid(),
+  "projectId": zod.string().uuid(),
+  "fileName": zod.string(),
+  "durationSeconds": zod.number(),
+  "bpm": zod.number(),
+  "startOffsetSeconds": zod.number(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Remove project audio metadata
+ */
+export const DeleteAudioTrackParams = zod.object({
+  "projectId": zod.coerce.string().uuid()
+})
+
+export const DeleteAudioTrackResponse = zod.void()
+
+
+/**
+ * @summary List project count annotations
+ */
+export const GetCountAnnotationsParams = zod.object({
+  "projectId": zod.coerce.string().uuid()
+})
+
+
+export const getCountAnnotationsResponseDataStrokesItemWidthExclusiveMin = 0;
+
+
+
+export const GetCountAnnotationsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "projectId": zod.string().uuid(),
+  "countNumber": zod.number().int().min(1),
+  "data": zod.object({
+  "strokes": zod.array(zod.object({
+  "id": zod.string(),
+  "tool": zod.enum(['pencil', 'highlighter']),
+  "color": zod.string(),
+  "width": zod.number().gt(getCountAnnotationsResponseDataStrokesItemWidthExclusiveMin),
+  "points": zod.array(zod.object({
+  "x": zod.number(),
+  "y": zod.number()
+}))
+})),
+  "texts": zod.array(zod.object({
+  "id": zod.string(),
+  "x": zod.number(),
+  "y": zod.number(),
+  "text": zod.string(),
+  "color": zod.string()
+}))
+}),
+  "updatedAt": zod.coerce.date()
+})
+export const GetCountAnnotationsResponse = zod.array(GetCountAnnotationsResponseItem)
+
+
+/**
+ * @summary Save sketches and notes for a count
+ */
+
+
+
+export const UpsertCountAnnotationParams = zod.object({
+  "projectId": zod.coerce.string().uuid(),
+  "countNumber": zod.coerce.number().int().min(1)
+})
+
+export const upsertCountAnnotationBodyStrokesItemWidthExclusiveMin = 0;
+
+
+
+export const UpsertCountAnnotationBody = zod.object({
+  "strokes": zod.array(zod.object({
+  "id": zod.string(),
+  "tool": zod.enum(['pencil', 'highlighter']),
+  "color": zod.string(),
+  "width": zod.number().gt(upsertCountAnnotationBodyStrokesItemWidthExclusiveMin),
+  "points": zod.array(zod.object({
+  "x": zod.number(),
+  "y": zod.number()
+}))
+})),
+  "texts": zod.array(zod.object({
+  "id": zod.string(),
+  "x": zod.number(),
+  "y": zod.number(),
+  "text": zod.string(),
+  "color": zod.string()
+}))
+})
+
+
+export const upsertCountAnnotationResponseDataStrokesItemWidthExclusiveMin = 0;
+
+
+
+export const UpsertCountAnnotationResponse = zod.object({
+  "id": zod.string().uuid(),
+  "projectId": zod.string().uuid(),
+  "countNumber": zod.number().int().min(1),
+  "data": zod.object({
+  "strokes": zod.array(zod.object({
+  "id": zod.string(),
+  "tool": zod.enum(['pencil', 'highlighter']),
+  "color": zod.string(),
+  "width": zod.number().gt(upsertCountAnnotationResponseDataStrokesItemWidthExclusiveMin),
+  "points": zod.array(zod.object({
+  "x": zod.number(),
+  "y": zod.number()
+}))
+})),
+  "texts": zod.array(zod.object({
+  "id": zod.string(),
+  "x": zod.number(),
+  "y": zod.number(),
+  "text": zod.string(),
+  "color": zod.string()
+}))
+}),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Add a dancer token to a project
  */
 export const CreateDancerParams = zod.object({
@@ -156,7 +321,8 @@ export const CreateDancerBody = zod.object({
   "name": zod.string().min(1),
   "initials": zod.string().min(1).max(createDancerBodyInitialsMax),
   "color": zod.string().regex(createDancerBodyColorRegExp),
-  "role": zod.string().optional()
+  "role": zod.string().optional(),
+  "groupName": zod.string().optional()
 })
 
 export const CreateDancerResponse = zod.object({
@@ -166,6 +332,7 @@ export const CreateDancerResponse = zod.object({
   "initials": zod.string(),
   "color": zod.string(),
   "role": zod.string().nullish(),
+  "groupName": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -187,7 +354,8 @@ export const UpdateDancerBody = zod.object({
   "name": zod.string().min(1).optional(),
   "initials": zod.string().min(1).max(updateDancerBodyInitialsMax).optional(),
   "color": zod.string().regex(updateDancerBodyColorRegExp).optional(),
-  "role": zod.string().nullish()
+  "role": zod.string().nullish(),
+  "groupName": zod.string().nullish()
 })
 
 export const UpdateDancerResponse = zod.object({
@@ -197,6 +365,7 @@ export const UpdateDancerResponse = zod.object({
   "initials": zod.string(),
   "color": zod.string(),
   "role": zod.string().nullish(),
+  "groupName": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -221,6 +390,7 @@ export const CreateKeyframeParams = zod.object({
 
 
 
+
 export const CreateKeyframeBody = zod.object({
   "name": zod.string().min(1),
   "positions": zod.array(zod.object({
@@ -228,6 +398,7 @@ export const CreateKeyframeBody = zod.object({
   "x": zod.number(),
   "y": zod.number()
 })),
+  "countNumber": zod.number().int().min(1).optional(),
   "notes": zod.string().optional()
 })
 
@@ -236,6 +407,7 @@ export const CreateKeyframeResponse = zod.object({
   "projectId": zod.string().uuid(),
   "name": zod.string(),
   "sortOrder": zod.number().int(),
+  "countNumber": zod.number().int().nullable(),
   "positions": zod.array(zod.object({
   "dancerId": zod.string().uuid(),
   "x": zod.number(),
@@ -257,6 +429,7 @@ export const UpdateKeyframeParams = zod.object({
 
 
 
+
 export const UpdateKeyframeBody = zod.object({
   "name": zod.string().min(1).optional(),
   "positions": zod.array(zod.object({
@@ -264,6 +437,7 @@ export const UpdateKeyframeBody = zod.object({
   "x": zod.number(),
   "y": zod.number()
 })).optional(),
+  "countNumber": zod.number().int().min(1).nullish(),
   "notes": zod.string().nullish()
 })
 
@@ -272,6 +446,7 @@ export const UpdateKeyframeResponse = zod.object({
   "projectId": zod.string().uuid(),
   "name": zod.string(),
   "sortOrder": zod.number().int(),
+  "countNumber": zod.number().int().nullable(),
   "positions": zod.array(zod.object({
   "dancerId": zod.string().uuid(),
   "x": zod.number(),
@@ -305,6 +480,7 @@ export const DuplicateKeyframeResponse = zod.object({
   "projectId": zod.string().uuid(),
   "name": zod.string(),
   "sortOrder": zod.number().int(),
+  "countNumber": zod.number().int().nullable(),
   "positions": zod.array(zod.object({
   "dancerId": zod.string().uuid(),
   "x": zod.number(),
@@ -335,6 +511,7 @@ export const ReorderKeyframesResponseItem = zod.object({
   "projectId": zod.string().uuid(),
   "name": zod.string(),
   "sortOrder": zod.number().int(),
+  "countNumber": zod.number().int().nullable(),
   "positions": zod.array(zod.object({
   "dancerId": zod.string().uuid(),
   "x": zod.number(),

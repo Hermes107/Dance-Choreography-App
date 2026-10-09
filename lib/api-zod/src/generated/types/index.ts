@@ -6,6 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './annotationPoint';
+export * from './annotationStroke';
+export * from './annotationStrokeTool';
+export * from './annotationText';
+export * from './audioTrack';
+export * from './audioTrackInput';
+export * from './countAnnotation';
+export * from './countAnnotationData';
+export * from './countAnnotationInput';
 export * from './dancer';
 export * from './dancerInput';
 export * from './dancerUpdate';

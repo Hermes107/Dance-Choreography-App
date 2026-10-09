@@ -17,4 +17,5 @@ export interface DancerInput {
   /** @pattern ^#[0-9a-fA-F]{6}$ */
   color: string;
   role?: string;
+  groupName?: string;
 }

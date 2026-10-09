@@ -20,6 +20,10 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AudioTrack,
+  AudioTrackInput,
+  CountAnnotation,
+  CountAnnotationData,
   Dancer,
   DancerInput,
   DancerUpdate,
@@ -469,6 +473,337 @@ export const useUpdateProject = <TError = ErrorType<NotFoundResponse>,
         TContext
       > => {
       return useMutation(getUpdateProjectMutationOptions(options));
+    }
+
+export const getUpsertAudioTrackUrl = (projectId: string,) => {
+
+
+
+
+  return `/api/projects/${projectId}/audio-track`
+}
+
+/**
+ * @summary Save project audio metadata
+ */
+export const upsertAudioTrack = async (projectId: string,
+    audioTrackInput: AudioTrackInput, options?: Parameters<typeof customFetch>[1]): Promise<AudioTrack> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AudioTrack>(getUpsertAudioTrackUrl(projectId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(audioTrackInput)
+  }
+);}
+
+
+
+
+
+export const getUpsertAudioTrackMutationKey = () => ['upsertAudioTrack'] as const;
+
+export const getUpsertAudioTrackMutationOptions = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertAudioTrack>>, TError,UpsertAudioTrackMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertAudioTrack>>, TError,UpsertAudioTrackMutationVariables, TContext> => {
+
+const mutationKey = getUpsertAudioTrackMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertAudioTrack>>, UpsertAudioTrackMutationVariables> = (props) => {
+          const {projectId,data} = props ?? {};
+
+          return  upsertAudioTrack(projectId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertAudioTrackMutationResult = NonNullable<Awaited<ReturnType<typeof upsertAudioTrack>>>
+    export type UpsertAudioTrackMutationBody = BodyType<AudioTrackInput>
+    export type UpsertAudioTrackMutationError = ErrorType<NotFoundResponse>
+    export type UpsertAudioTrackMutationVariables = {projectId: string;data: BodyType<AudioTrackInput>}
+
+    /**
+ * @summary Save project audio metadata
+ */
+export const useUpsertAudioTrack = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertAudioTrack>>, TError,UpsertAudioTrackMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upsertAudioTrack>>,
+        TError,
+        UpsertAudioTrackMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpsertAudioTrackMutationOptions(options));
+    }
+
+export const getDeleteAudioTrackUrl = (projectId: string,) => {
+
+
+
+
+  return `/api/projects/${projectId}/audio-track`
+}
+
+/**
+ * @summary Remove project audio metadata
+ */
+export const deleteAudioTrack = async (projectId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteAudioTrackUrl(projectId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteAudioTrackMutationKey = () => ['deleteAudioTrack'] as const;
+
+export const getDeleteAudioTrackMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAudioTrack>>, TError,DeleteAudioTrackMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAudioTrack>>, TError,DeleteAudioTrackMutationVariables, TContext> => {
+
+const mutationKey = getDeleteAudioTrackMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAudioTrack>>, DeleteAudioTrackMutationVariables> = (props) => {
+          const {projectId} = props ?? {};
+
+          return  deleteAudioTrack(projectId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAudioTrackMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAudioTrack>>>
+
+    export type DeleteAudioTrackMutationError = ErrorType<unknown>
+    export type DeleteAudioTrackMutationVariables = {projectId: string}
+
+    /**
+ * @summary Remove project audio metadata
+ */
+export const useDeleteAudioTrack = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAudioTrack>>, TError,DeleteAudioTrackMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAudioTrack>>,
+        TError,
+        DeleteAudioTrackMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteAudioTrackMutationOptions(options));
+    }
+
+export const getGetCountAnnotationsUrl = (projectId: string,) => {
+
+
+
+
+  return `/api/projects/${projectId}/count-annotations`
+}
+
+/**
+ * @summary List project count annotations
+ */
+export const getCountAnnotations = async (projectId: string, options?: Parameters<typeof customFetch>[1]): Promise<CountAnnotation[]> => {
+
+  return customFetch<CountAnnotation[]>(getGetCountAnnotationsUrl(projectId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCountAnnotationsQueryKey = (projectId: string,) => {
+    return [
+    `/api/projects/${projectId}/count-annotations`
+    ] as const;
+    }
+
+
+export const getGetCountAnnotationsQueryOptions = <TData = Awaited<ReturnType<typeof getCountAnnotations>>, TError = ErrorType<NotFoundResponse>>(projectId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCountAnnotations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCountAnnotationsQueryKey(projectId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCountAnnotations>>> = ({ signal }) => getCountAnnotations(projectId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: projectId !== null && projectId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCountAnnotations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCountAnnotationsQueryResult = NonNullable<Awaited<ReturnType<typeof getCountAnnotations>>>
+export type GetCountAnnotationsQueryError = ErrorType<NotFoundResponse>
+
+
+/**
+ * @summary List project count annotations
+ */
+
+export function useGetCountAnnotations<TData = Awaited<ReturnType<typeof getCountAnnotations>>, TError = ErrorType<NotFoundResponse>>(
+ projectId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCountAnnotations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCountAnnotationsQueryOptions(projectId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpsertCountAnnotationUrl = (projectId: string,
+    countNumber: number,) => {
+
+
+
+
+  return `/api/projects/${projectId}/count-annotations/${countNumber}`
+}
+
+/**
+ * @summary Save sketches and notes for a count
+ */
+export const upsertCountAnnotation = async (projectId: string,
+    countNumber: number,
+    countAnnotationData: CountAnnotationData, options?: Parameters<typeof customFetch>[1]): Promise<CountAnnotation> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CountAnnotation>(getUpsertCountAnnotationUrl(projectId,countNumber),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(countAnnotationData)
+  }
+);}
+
+
+
+
+
+export const getUpsertCountAnnotationMutationKey = () => ['upsertCountAnnotation'] as const;
+
+export const getUpsertCountAnnotationMutationOptions = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertCountAnnotation>>, TError,UpsertCountAnnotationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertCountAnnotation>>, TError,UpsertCountAnnotationMutationVariables, TContext> => {
+
+const mutationKey = getUpsertCountAnnotationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertCountAnnotation>>, UpsertCountAnnotationMutationVariables> = (props) => {
+          const {projectId,countNumber,data} = props ?? {};
+
+          return  upsertCountAnnotation(projectId,countNumber,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertCountAnnotationMutationResult = NonNullable<Awaited<ReturnType<typeof upsertCountAnnotation>>>
+    export type UpsertCountAnnotationMutationBody = BodyType<CountAnnotationData>
+    export type UpsertCountAnnotationMutationError = ErrorType<NotFoundResponse>
+    export type UpsertCountAnnotationMutationVariables = {projectId: string;countNumber: number;data: BodyType<CountAnnotationData>}
+
+    /**
+ * @summary Save sketches and notes for a count
+ */
+export const useUpsertCountAnnotation = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertCountAnnotation>>, TError,UpsertCountAnnotationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upsertCountAnnotation>>,
+        TError,
+        UpsertCountAnnotationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpsertCountAnnotationMutationOptions(options));
     }
 
 export const getCreateDancerUrl = (projectId: string,) => {

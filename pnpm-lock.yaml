@@ -589,6 +589,9 @@ importers:
       vite:
         specifier: 'catalog:'
         version: 7.3.6(@types/node@25.9.6)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.0)
+      wavesurfer.js:
+        specifier: ^8.0.2
+        version: 8.0.2
       wouter:
         specifier: ^3.3.5
         version: 3.11.0(react@19.1.0)
@@ -3077,6 +3080,9 @@ packages:
         optional: true
       yaml:
         optional: true
+
+  wavesurfer.js@8.0.2:
+    resolution: {integrity: sha512-REv2U0DvZIm/i4K61qA7OZ3dGjFNtZFbh0PGRJ4EPcCU3Vs2tiPzIVFw1jipapIQnib76OPH2T8ARNSW47jN+w==}
 
   which@2.0.2:
     resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
@@ -5570,6 +5576,8 @@ snapshots:
       lightningcss: 1.32.0
       tsx: 4.23.13
       yaml: 2.9.0
+
+  wavesurfer.js@8.0.2: {}
 
   which@2.0.2:
     dependencies:

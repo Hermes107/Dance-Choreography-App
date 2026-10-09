@@ -17,6 +17,7 @@ export const dancersTable = pgTable("dancers", {
   initials: text("initials").notNull(),
   color: text("color").notNull(),
   role: text("role"),
+  groupName: text("group_name"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

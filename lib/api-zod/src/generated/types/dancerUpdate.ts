@@ -18,4 +18,6 @@ export interface DancerUpdate {
   color?: string;
   /** @nullable */
   role?: string | null;
+  /** @nullable */
+  groupName?: string | null;
 }

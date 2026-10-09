@@ -12,6 +12,8 @@ export interface Keyframe {
   projectId: string;
   name: string;
   sortOrder: number;
+  /** @nullable */
+  countNumber: number | null;
   positions: Position[];
   /** @nullable */
   notes?: string | null;

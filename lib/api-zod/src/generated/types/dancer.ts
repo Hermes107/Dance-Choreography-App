@@ -14,5 +14,7 @@ export interface Dancer {
   color: string;
   /** @nullable */
   role?: string | null;
+  /** @nullable */
+  groupName?: string | null;
   createdAt: Date;
 }

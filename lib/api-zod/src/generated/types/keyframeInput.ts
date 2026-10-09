@@ -11,5 +11,7 @@ export interface KeyframeInput {
   /** @minLength 1 */
   name: string;
   positions: Position[];
+  /** @minimum 1 */
+  countNumber?: number;
   notes?: string;
 }

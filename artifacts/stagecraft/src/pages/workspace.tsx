@@ -25,6 +25,7 @@ import {
   Sun,
   Trash2,
   UserRoundPlus,
+  UsersRound,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
@@ -195,52 +196,96 @@ function Topbar({ project, onProjectSettings, saveState, theme, onToggleTheme }:
   );
 }
 
-function StageBoard({ project, dancers, keyframes, selectedKeyframe, onSelectDancer, onMoveDancer, onCommitPosition, gridSnap, setGridSnap, zoom, setZoom, pan, setPan, selectedDancerId }: {
-  project: Project; dancers: Dancer[]; keyframes: Keyframe[]; selectedKeyframe: Keyframe | undefined; onSelectDancer: (id: string) => void; onMoveDancer: (id: string, position: Position) => void; onCommitPosition: (id: string) => void; gridSnap: boolean; setGridSnap: (value: boolean) => void; zoom: number; setZoom: (value: number) => void; pan: { x: number; y: number }; setPan: (value: { x: number; y: number }) => void; selectedDancerId?: string;
+function StageBoard({ project, dancers, keyframes, selectedKeyframe, onSelectDancer, onMoveDancers, onCommitPositions, gridSnap, setGridSnap, zoom, setZoom, pan, setPan, selectedDancerId }: {
+  project: Project; dancers: Dancer[]; keyframes: Keyframe[]; selectedKeyframe: Keyframe | undefined; onSelectDancer: (id: string) => void; onMoveDancers: (positions: Position[]) => void; onCommitPositions: (dancerIds: string[], positions: Position[]) => void; gridSnap: boolean; setGridSnap: (value: boolean) => void; zoom: number; setZoom: (value: number) => void; pan: { x: number; y: number }; setPan: (value: { x: number; y: number }) => void; selectedDancerId?: string;
 }) {
   const surfaceRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ id: string; pointerId: number } | null>(null);
+  const dragRef = useRef<{ id: string; pointerId: number; ids: string[]; startPointer: { x: number; y: number }; starts: Position[]; latest: Position[] } | null>(null);
   const panRef = useRef<{ pointerId: number; x: number; y: number; startX: number; startY: number } | null>(null);
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchRef = useRef<{ distance: number; zoom: number; pan: { x: number; y: number }; center: { x: number; y: number } } | null>(null);
   const [showPaths, setShowPaths] = useState(true);
   const [isPanning, setIsPanning] = useState(false);
+  const [groupDragEnabled, setGroupDragEnabled] = useState(false);
   const positions = selectedKeyframe?.positions ?? [];
   const previous = keyframes.find((frame) => frame.sortOrder === (selectedKeyframe?.sortOrder ?? 0) - 1);
   const getPosition = (id: string) => positions.find((position) => position.dancerId === id) ?? { dancerId: id, x: project.stageWidth / 2, y: project.stageHeight / 2 };
 
-  const positionFromEvent = (event: ReactPointerEvent, id: string) => {
+  const pointFromEvent = (event: ReactPointerEvent) => {
     const node = surfaceRef.current;
     if (!node) return;
     const rect = node.getBoundingClientRect();
-    const rawX = Math.max(0, Math.min(project.stageWidth, ((event.clientX - rect.left) / rect.width) * project.stageWidth));
-    const rawY = Math.max(0, Math.min(project.stageHeight, ((event.clientY - rect.top) / rect.height) * project.stageHeight));
-    const snap = gridSnap ? project.gridSize : 1;
-    onMoveDancer(id, { dancerId: id, x: Math.round(rawX / snap) * snap, y: Math.round(rawY / snap) * snap });
+    return { x: ((event.clientX - rect.left) / rect.width) * project.stageWidth, y: ((event.clientY - rect.top) / rect.height) * project.stageHeight };
   };
+  const distance = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
+  const midpoint = (a: { x: number; y: number }, b: { x: number; y: number }) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
   const onSurfacePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if ((event.target as HTMLElement).closest('[data-token]')) return;
-    panRef.current = { pointerId: event.pointerId, x: pan.x, y: pan.y, startX: event.clientX, startY: event.clientY };
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     setIsPanning(true);
     event.currentTarget.setPointerCapture(event.pointerId);
+    if (pointersRef.current.size === 1) {
+      panRef.current = { pointerId: event.pointerId, x: pan.x, y: pan.y, startX: event.clientX, startY: event.clientY };
+    } else if (pointersRef.current.size === 2) {
+      const [first, second] = [...pointersRef.current.values()];
+      pinchRef.current = { distance: Math.max(1, distance(first, second)), zoom, pan: { ...pan }, center: midpoint(first, second) };
+      panRef.current = null;
+    }
   };
   const onSurfacePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (dragRef.current) positionFromEvent(event, dragRef.current.id);
-    if (panRef.current) setPan({ x: panRef.current.x + event.clientX - panRef.current.startX, y: panRef.current.y + event.clientY - panRef.current.startY });
+    const drag = dragRef.current;
+    if (drag?.pointerId === event.pointerId) {
+      const current = pointFromEvent(event);
+      if (!current) return;
+      const snap = gridSnap ? project.gridSize : 1;
+      const dx = current.x - drag.startPointer.x;
+      const dy = current.y - drag.startPointer.y;
+      const minX = Math.max(...drag.starts.map((position) => -position.x));
+      const maxX = Math.min(...drag.starts.map((position) => project.stageWidth - position.x));
+      const minY = Math.max(...drag.starts.map((position) => -position.y));
+      const maxY = Math.min(...drag.starts.map((position) => project.stageHeight - position.y));
+      const snappedX = Math.round(dx / snap) * snap;
+      const snappedY = Math.round(dy / snap) * snap;
+      const offsetX = Math.max(minX, Math.min(maxX, snappedX));
+      const offsetY = Math.max(minY, Math.min(maxY, snappedY));
+      drag.latest = drag.starts.map((position) => ({ ...position, x: position.x + offsetX, y: position.y + offsetY }));
+      onMoveDancers(drag.latest);
+    }
+    const active = pointersRef.current;
+    if (active.has(event.pointerId)) active.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pinchRef.current && active.size >= 2) {
+      const [first, second] = [...active.values()];
+      const center = midpoint(first, second);
+      const initial = pinchRef.current;
+      setZoom(Math.max(.65, Math.min(1.5, initial.zoom * distance(first, second) / initial.distance)));
+      setPan({ x: initial.pan.x + center.x - initial.center.x, y: initial.pan.y + center.y - initial.center.y });
+    } else if (panRef.current?.pointerId === event.pointerId) {
+      setPan({ x: panRef.current.x + event.clientX - panRef.current.startX, y: panRef.current.y + event.clientY - panRef.current.startY });
+    }
   };
   const onSurfacePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (dragRef.current?.pointerId === event.pointerId) {
-      onCommitPosition(dragRef.current.id);
+      onCommitPositions(dragRef.current.ids, dragRef.current.latest);
       dragRef.current = null;
     }
-    if (panRef.current?.pointerId === event.pointerId) panRef.current = null;
-    setIsPanning(false);
+    pointersRef.current.delete(event.pointerId);
+    if (pinchRef.current) {
+      pinchRef.current = null;
+      const [remaining] = [...pointersRef.current.entries()];
+      if (remaining) {
+        const [pointerId, point] = remaining;
+        panRef.current = { pointerId, x: pan.x, y: pan.y, startX: point.x, startY: point.y };
+      } else panRef.current = null;
+    } else if (panRef.current?.pointerId === event.pointerId) panRef.current = null;
+    setIsPanning(pointersRef.current.size > 0);
   };
 
   return (
     <section className="stage-surroundings flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center justify-between border-b border-border/80 px-4 py-3 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/80 px-4 py-3 sm:px-6">
         <div><div className="flex items-center gap-2 text-xs font-semibold"><Crosshair size={14} className="text-primary" /> Stage view</div><div className="mt-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{project.stageWidth} × {project.stageHeight} / {project.gridSize}px grid</div></div>
-        <div className="flex items-center gap-1 rounded-lg border border-border bg-card/70 p-1">
+          <div className="flex flex-wrap items-center justify-end gap-1 rounded-lg border border-border bg-card/70 p-1">
           <IconButton label="zoom out" data-testid="button-zoom-out" onClick={() => setZoom(Math.max(.65, Number((zoom - .1).toFixed(2))))}><ZoomOut size={15} /></IconButton>
           <span data-testid="text-zoom" className="w-12 text-center font-mono text-[10px] text-muted-foreground">{Math.round(zoom * 100)}%</span>
           <IconButton label="zoom in" data-testid="button-zoom-in" onClick={() => setZoom(Math.min(1.5, Number((zoom + .1).toFixed(2))))}><ZoomIn size={15} /></IconButton>
@@ -248,6 +293,8 @@ function StageBoard({ project, dancers, keyframes, selectedKeyframe, onSelectDan
           <IconButton label="reset view" data-testid="button-reset-view" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}><RotateCcw size={15} /></IconButton>
           <span className="mx-1 h-5 w-px bg-border" />
           <IconButton label="toggle paths" data-testid="button-toggle-paths" onClick={() => setShowPaths(!showPaths)} className={showPaths ? 'bg-secondary/70 text-foreground' : ''}><Move size={15} /></IconButton>
+          <span className="mx-1 h-5 w-px bg-border" />
+          <button type="button" aria-pressed={groupDragEnabled} data-testid="button-toggle-group-drag" onClick={() => setGroupDragEnabled((enabled) => !enabled)} className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[10px] font-medium transition-colors ${groupDragEnabled ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}><UsersRound size={13} />Group drag {groupDragEnabled ? 'ON' : 'OFF'}</button>
         </div>
       </div>
       <div className="relative min-h-[420px] flex-1 overflow-hidden p-4 sm:p-8">
@@ -276,7 +323,18 @@ function StageBoard({ project, dancers, keyframes, selectedKeyframe, onSelectDan
                     data-token={`token-${dancer.id}`}
                     data-testid={`button-dancer-token-${dancer.id}`}
                     onClick={() => onSelectDancer(dancer.id)}
-                    onPointerDown={(event) => { event.stopPropagation(); dragRef.current = { id: dancer.id, pointerId: event.pointerId }; onSelectDancer(dancer.id); event.currentTarget.setPointerCapture(event.pointerId); }}
+                    onPointerDown={(event) => {
+                      event.stopPropagation();
+                      const startPointer = pointFromEvent(event);
+                      const groupName = dancer.groupName?.trim();
+                      const moving = groupDragEnabled && groupName
+                        ? dancers.filter((member) => member.groupName?.trim().toLocaleLowerCase() === groupName.toLocaleLowerCase())
+                        : [dancer];
+                      const starts = moving.map((member) => getPosition(member.id));
+                      if (startPointer) dragRef.current = { id: dancer.id, pointerId: event.pointerId, ids: moving.map((member) => member.id), startPointer, starts, latest: starts };
+                      onSelectDancer(dancer.id);
+                      event.currentTarget.setPointerCapture(event.pointerId);
+                    }}
                     style={{ left: `${(position.x / project.stageWidth) * 100}%`, top: `${(position.y / project.stageHeight) * 100}%`, backgroundColor: dancer.color }}
                     className={`token-shadow absolute grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 touch-none place-items-center rounded-full border-2 border-white/80 text-xs font-bold text-[#22263b] transition-[box-shadow,transform] duration-100 sm:h-14 sm:w-14 sm:text-sm ${isSelected ? 'z-20 scale-110 ring-4 ring-primary/50' : 'z-10 hover:scale-105'}`}
                   >
@@ -307,33 +365,36 @@ function Timeline({ keyframes, selectedId, onSelect, onAdd, onDuplicate, onDelet
   );
 }
 
-function Inspector({ dancers, selectedDancer, onSelectDancer, onAddDancer, onUpdateDancer, onDeleteDancer, project, onUpdateProject }: { dancers: Dancer[]; selectedDancer?: Dancer; onSelectDancer: (id: string) => void; onAddDancer: () => void; onUpdateDancer: (dancer: Dancer, data: { name: string; initials: string; color: string; role: string }) => void; onDeleteDancer: (id: string) => void; project: Project; onUpdateProject: (data: { name: string; description: string }) => void }) {
+function Inspector({ dancers, selectedDancer, onSelectDancer, onAddDancer, onUpdateDancer, onDeleteDancer, project, onUpdateProject }: { dancers: Dancer[]; selectedDancer?: Dancer; onSelectDancer: (id: string) => void; onAddDancer: () => void; onUpdateDancer: (dancer: Dancer, data: { name: string; initials: string; color: string; role: string; groupName: string | null }) => void; onDeleteDancer: (id: string) => void; project: Project; onUpdateProject: (data: { name: string; description: string }) => void }) {
   const [name, setName] = useState(selectedDancer?.name ?? '');
   const [initials, setInitials] = useState(selectedDancer?.initials ?? '');
   const [color, setColor] = useState(selectedDancer?.color ?? colorSwatches[0]);
   const [role, setRole] = useState(selectedDancer?.role ?? '');
+  const [groupName, setGroupName] = useState(selectedDancer?.groupName ?? '');
   const [description, setDescription] = useState(project.description ?? '');
-  useEffect(() => { setName(selectedDancer?.name ?? ''); setInitials(selectedDancer?.initials ?? ''); setColor(selectedDancer?.color ?? colorSwatches[0]); setRole(selectedDancer?.role ?? ''); }, [selectedDancer]);
+  const groupNames = [...new Set(dancers.map((dancer) => dancer.groupName?.trim()).filter((value): value is string => Boolean(value)))];
+  useEffect(() => { setName(selectedDancer?.name ?? ''); setInitials(selectedDancer?.initials ?? ''); setColor(selectedDancer?.color ?? colorSwatches[0]); setRole(selectedDancer?.role ?? ''); setGroupName(selectedDancer?.groupName ?? ''); }, [selectedDancer]);
   useEffect(() => setDescription(project.description ?? ''), [project.description]);
-  const saveDancer = () => selectedDancer && name.trim() && onUpdateDancer(selectedDancer, { name: name.trim(), initials: initials.trim().slice(0, 3).toUpperCase(), color, role: role.trim() });
+  const saveDancer = () => selectedDancer && name.trim() && onUpdateDancer(selectedDancer, { name: name.trim(), initials: initials.trim().slice(0, 3).toUpperCase(), color, role: role.trim(), groupName: groupName.trim() || null });
   return (
     <aside className="flex w-full flex-col border-l border-border bg-card lg:w-[292px]">
       <div className="flex items-center justify-between border-b border-border px-5 py-4"><div className="flex items-center gap-2 text-xs font-semibold"><PanelRight size={14} className="text-primary" /> Inspector</div><SlidersHorizontal size={14} className="text-muted-foreground" /></div>
       <div className="flex-1 overflow-y-auto p-5">
-        <div className="mb-8"><div className="mb-3 flex items-center justify-between"><span className="font-mono text-[10px] uppercase tracking-[.16em] text-muted-foreground">Ensemble / {dancers.length}</span><IconButton label="add dancer" data-testid="button-add-dancer" onClick={onAddDancer} className="h-7 w-7 border border-border text-primary"><UserRoundPlus size={14} /></IconButton></div><div className="grid gap-1.5">{dancers.length === 0 && <div data-testid="empty-dancers" className="rounded-lg border border-dashed border-border p-4 text-center text-xs leading-5 text-muted-foreground">No dancers yet. Add the first mark to the floor.</div>}{dancers.map((dancer) => <button key={dancer.id} data-testid={`button-select-dancer-${dancer.id}`} onClick={() => onSelectDancer(dancer.id)} className={`flex items-center gap-3 rounded-lg border px-2.5 py-2 text-left transition-colors ${selectedDancer?.id === dancer.id ? 'border-primary/60 bg-primary/8' : 'border-transparent hover:border-border hover:bg-muted/60'}`}><span className="grid h-8 w-8 place-items-center rounded-full text-[10px] font-bold text-[#22263b]" style={{ backgroundColor: dancer.color }}>{dancer.initials}</span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold">{dancer.name}</span><span className="block truncate font-mono text-[9px] uppercase tracking-wider text-muted-foreground">{dancer.role || 'Ensemble'}</span></span>{selectedDancer?.id === dancer.id && <ChevronRight size={14} className="text-primary" />}</button>)}</div></div>
-        {selectedDancer ? <div className="border-t border-border pt-5"><div className="mb-4 flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-full text-xs font-bold text-[#22263b]" style={{ backgroundColor: color }}>{initials || '?'}</span><div><div className="text-sm font-semibold">Token details</div><div className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">Edit selected mark</div></div></div><div className="grid gap-4"><Field label="Name" value={name} onChange={setName} testId="input-dancer-name" /><div className="grid grid-cols-[1fr_78px] gap-3"><Field label="Initials" value={initials} onChange={setInitials} testId="input-dancer-initials" /><label className="grid gap-1.5 text-xs font-medium text-muted-foreground">Color<input data-testid="input-dancer-color" type="color" value={color} onChange={(event) => setColor(event.target.value)} className="h-10 w-full cursor-pointer rounded-md border border-input bg-background p-1" /></label></div><Field label="Role / note" value={role} onChange={setRole} testId="input-dancer-role" placeholder="e.g. lead" /><div className="flex gap-2"><Button data-testid="button-save-dancer" onClick={saveDancer} className="h-9 flex-1 border-primary bg-primary text-xs text-primary-foreground hover:bg-primary/90"><Save size={13} /> Save token</Button><IconButton label="delete dancer" data-testid="button-delete-dancer" onClick={() => onDeleteDancer(selectedDancer.id)} className="h-9 w-9 border border-border text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 size={14} /></IconButton></div></div></div> : <div className="rounded-xl bg-muted/60 p-4"><div className="mb-2 flex items-center gap-2 text-xs font-semibold"><Move size={14} className="text-primary" /> Place a dancer</div><p className="text-xs leading-5 text-muted-foreground">Select a token here or drag one across the stage. Positions save to the active cue.</p></div>}
+        <div className="mb-8"><div className="mb-3 flex items-center justify-between"><span className="font-mono text-[10px] uppercase tracking-[.16em] text-muted-foreground">Ensemble / {dancers.length}</span><IconButton label="add dancer" data-testid="button-add-dancer" onClick={onAddDancer} className="h-7 w-7 border border-border text-primary"><UserRoundPlus size={14} /></IconButton></div><div className="grid gap-1.5">{dancers.length === 0 && <div data-testid="empty-dancers" className="rounded-lg border border-dashed border-border p-4 text-center text-xs leading-5 text-muted-foreground">No dancers yet. Add the first mark to the floor.</div>}{dancers.map((dancer) => <button key={dancer.id} data-testid={`button-select-dancer-${dancer.id}`} onClick={() => onSelectDancer(dancer.id)} className={`flex items-center gap-3 rounded-lg border px-2.5 py-2 text-left transition-colors ${selectedDancer?.id === dancer.id ? 'border-primary/60 bg-primary/8' : 'border-transparent hover:border-border hover:bg-muted/60'}`}><span className="grid h-8 w-8 place-items-center rounded-full text-[10px] font-bold text-[#22263b]" style={{ backgroundColor: dancer.color }}>{dancer.initials}</span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold">{dancer.name}</span><span className="block truncate font-mono text-[9px] uppercase tracking-wider text-muted-foreground">{dancer.role || 'Ensemble'}</span>{dancer.groupName && <span className="mt-0.5 block truncate text-[9px] text-primary">{dancer.groupName}</span>}</span>{selectedDancer?.id === dancer.id && <ChevronRight size={14} className="text-primary" />}</button>)}</div></div>
+        {selectedDancer ? <div className="border-t border-border pt-5"><div className="mb-4 flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-full text-xs font-bold text-[#22263b]" style={{ backgroundColor: color }}>{initials || '?'}</span><div><div className="text-sm font-semibold">Token details</div><div className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">Edit selected mark</div></div></div><div className="grid gap-4"><Field label="Name" value={name} onChange={setName} testId="input-dancer-name" /><div className="grid grid-cols-[1fr_78px] gap-3"><Field label="Initials" value={initials} onChange={setInitials} testId="input-dancer-initials" /><label className="grid gap-1.5 text-xs font-medium text-muted-foreground">Color<input data-testid="input-dancer-color" type="color" value={color} onChange={(event) => setColor(event.target.value)} className="h-10 w-full cursor-pointer rounded-md border border-input bg-background p-1" /></label></div><Field label="Role / note" value={role} onChange={setRole} testId="input-dancer-role" placeholder="e.g. lead" /><label className="grid gap-1.5 text-xs font-medium text-muted-foreground">Group / ensemble<input data-testid="input-dancer-group" list="stagecraft-group-names" value={groupName} onChange={(event) => setGroupName(event.target.value)} placeholder="e.g. North ensemble" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" /><datalist id="stagecraft-group-names">{groupNames.map((group) => <option key={group} value={group} />)}</datalist><span className="text-[10px] leading-4 text-muted-foreground">Use the same group name for dancers that should move together.</span></label><div className="flex gap-2"><Button data-testid="button-save-dancer" onClick={saveDancer} className="h-9 flex-1 border-primary bg-primary text-xs text-primary-foreground hover:bg-primary/90"><Save size={13} /> Save token</Button><IconButton label="delete dancer" data-testid="button-delete-dancer" onClick={() => onDeleteDancer(selectedDancer.id)} className="h-9 w-9 border border-border text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 size={14} /></IconButton></div></div></div> : <div className="rounded-xl bg-muted/60 p-4"><div className="mb-2 flex items-center gap-2 text-xs font-semibold"><Move size={14} className="text-primary" /> Place a dancer</div><p className="text-xs leading-5 text-muted-foreground">Select a token here or drag one across the stage. Positions save to the active cue.</p></div>}
         <div className="mt-8 border-t border-border pt-5"><div className="mb-3 flex items-center gap-2"><Settings2 size={14} className="text-primary" /><span className="font-mono text-[10px] uppercase tracking-[.16em] text-muted-foreground">Project note</span></div><textarea data-testid="input-project-description" value={description} onChange={(event) => setDescription(event.target.value)} className="min-h-20 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-xs leading-5 outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" /><Button data-testid="button-save-project-note" onClick={() => onUpdateProject({ name: project.name, description })} className="mt-2 h-8 w-full border-border bg-background text-xs hover:bg-muted"><Save size={13} /> Save project note</Button></div>
       </div>
     </aside>
   );
 }
 
-function AddDancerPanel({ onClose, onCreate, pending }: { onClose: () => void; onCreate: (data: { name: string; initials: string; color: string; role: string }) => void; pending: boolean }) {
+function AddDancerPanel({ onClose, onCreate, pending }: { onClose: () => void; onCreate: (data: { name: string; initials: string; color: string; role: string; groupName: string }) => void; pending: boolean }) {
   const [name, setName] = useState('');
   const [initials, setInitials] = useState('');
   const [color, setColor] = useState(colorSwatches[0]);
   const [role, setRole] = useState('');
-  return <div className="fixed inset-0 z-50 grid place-items-center bg-[#1b1e2f]/35 p-5 backdrop-blur-sm"><div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-xl"><div className="mb-5 flex items-start justify-between"><div><div className="text-lg font-semibold">Add dancer token</div><p className="mt-1 text-xs text-muted-foreground">A mark to move through the scene.</p></div><IconButton label="close add dancer" data-testid="button-close-add-dancer" onClick={onClose}><ChevronDown size={17} /></IconButton></div><div className="grid gap-4"><Field label="Name" value={name} onChange={setName} testId="input-new-dancer-name" placeholder="e.g. Iris Chen" /><div className="grid grid-cols-[1fr_78px] gap-3"><Field label="Initials" value={initials} onChange={setInitials} testId="input-new-dancer-initials" placeholder="IC" /><label className="grid gap-1.5 text-xs font-medium text-muted-foreground">Color<input data-testid="input-new-dancer-color" type="color" value={color} onChange={(event) => setColor(event.target.value)} className="h-10 w-full cursor-pointer rounded-md border border-input bg-background p-1" /></label></div><Field label="Role / note" value={role} onChange={setRole} testId="input-new-dancer-role" placeholder="e.g. soloist" /></div><Button data-testid="button-create-dancer" disabled={!name.trim() || !initials.trim() || pending} onClick={() => onCreate({ name: name.trim(), initials: initials.trim().slice(0, 3).toUpperCase(), color, role: role.trim() })} className="mt-6 h-11 w-full border-primary bg-primary text-primary-foreground hover:bg-primary/90">{pending ? 'Adding mark…' : 'Add to ensemble'}<Plus size={15} /></Button></div></div>;
+  const [groupName, setGroupName] = useState('');
+  return <div className="fixed inset-0 z-50 grid place-items-center bg-[#1b1e2f]/35 p-5 backdrop-blur-sm"><div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-xl"><div className="mb-5 flex items-start justify-between"><div><div className="text-lg font-semibold">Add dancer token</div><p className="mt-1 text-xs text-muted-foreground">A mark to move through the scene.</p></div><IconButton label="close add dancer" data-testid="button-close-add-dancer" onClick={onClose}><ChevronDown size={17} /></IconButton></div><div className="grid gap-4"><Field label="Name" value={name} onChange={setName} testId="input-new-dancer-name" placeholder="e.g. Iris Chen" /><div className="grid grid-cols-[1fr_78px] gap-3"><Field label="Initials" value={initials} onChange={setInitials} testId="input-new-dancer-initials" placeholder="IC" /><label className="grid gap-1.5 text-xs font-medium text-muted-foreground">Color<input data-testid="input-new-dancer-color" type="color" value={color} onChange={(event) => setColor(event.target.value)} className="h-10 w-full cursor-pointer rounded-md border border-input bg-background p-1" /></label></div><Field label="Role / note" value={role} onChange={setRole} testId="input-new-dancer-role" placeholder="e.g. soloist" /><Field label="Group / ensemble (optional)" value={groupName} onChange={setGroupName} testId="input-new-dancer-group" placeholder="e.g. North ensemble" /></div><Button data-testid="button-create-dancer" disabled={!name.trim() || !initials.trim() || pending} onClick={() => onCreate({ name: name.trim(), initials: initials.trim().slice(0, 3).toUpperCase(), color, role: role.trim(), groupName: groupName.trim() })} className="mt-6 h-11 w-full border-primary bg-primary text-primary-foreground hover:bg-primary/90">{pending ? 'Adding mark…' : 'Add to ensemble'}<Plus size={15} /></Button></div></div>;
 }
 
 function ProjectSettings({ project, onClose, onSave, pending }: { project: Project; onClose: () => void; onSave: (data: { name: string; description: string }) => void; pending: boolean }) {
@@ -390,10 +451,15 @@ function WorkspaceContent({ projects, selectedProjectId, setSelectedProjectId, o
   if (query.isLoading || !project) return <LoadingWorkspace />;
   if (query.isError) return <main className="grid min-h-[100dvh] place-items-center bg-background p-6"><div className="max-w-sm rounded-2xl border border-destructive/30 bg-card p-7 text-center"><div className="text-lg font-semibold">This rehearsal is out of reach.</div><p className="mt-2 text-sm leading-6 text-muted-foreground">The workspace could not be opened.</p><Button data-testid="button-retry-workspace" onClick={() => query.refetch()} className="mt-5 border-primary bg-primary text-primary-foreground">Retry</Button></div></main>;
   const mutateAndRefresh = (action: () => void) => { setSaveState('Saving'); action(); };
-  const moveDancer = (id: string, position: Position) => { setLocalPositions((current) => [...current.filter((item) => item.dancerId !== id), position]); };
-  const savePosition = (dancerId: string) => {
+  const moveDancers = (positions: Position[]) => {
+    const movingIds = new Set(positions.map((position) => position.dancerId));
+    setLocalPositions((current) => [...current.filter((position) => !movingIds.has(position.dancerId)), ...positions]);
+  };
+  const savePositions = (dancerIds: string[], movedPositions: Position[]) => {
     if (!selectedKeyframe) return;
-    const nextPositions = [...localPositions.filter((position) => position.dancerId !== dancerId), localPositions.find((position) => position.dancerId === dancerId)!].filter(Boolean);
+    const movingIds = new Set(dancerIds);
+    const nextPositions = [...localPositions.filter((position) => !movingIds.has(position.dancerId)), ...movedPositions];
+    setLocalPositions(nextPositions);
     mutateAndRefresh(() => updateKeyframe.mutate({ keyframeId: selectedKeyframe.id, data: { positions: nextPositions } }, { onSuccess: () => { setSaveState('Saved'); invalidate(); } }));
   };
   const createCue = () => {
@@ -401,8 +467,8 @@ function WorkspaceContent({ projects, selectedProjectId, setSelectedProjectId, o
   };
   const updateProjectData = (data: { name: string; description: string }) => { mutateAndRefresh(() => updateProject.mutate({ projectId: selectedProjectId, data }, { onSuccess: () => { setSaveState('Saved'); setShowProjectSettings(false); queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() }); invalidate(); } })); };
   const selectedDancer = dancers.find((dancer) => dancer.id === selectedDancerId);
-  const addDancer = (data: { name: string; initials: string; color: string; role: string }) => { mutateAndRefresh(() => createDancer.mutate({ projectId: selectedProjectId, data }, { onSuccess: (dancer) => { setSelectedDancerId(dancer.id); setShowAddDancer(false); setSaveState('Saved'); invalidate(); } })); };
-  const editDancer = (dancer: Dancer, data: { name: string; initials: string; color: string; role: string }) => { mutateAndRefresh(() => updateDancer.mutate({ dancerId: dancer.id, data }, { onSuccess: () => { setSaveState('Saved'); invalidate(); } })); };
+  const addDancer = (data: { name: string; initials: string; color: string; role: string; groupName: string }) => { const { groupName, ...dancerData } = data; mutateAndRefresh(() => createDancer.mutate({ projectId: selectedProjectId, data: { ...dancerData, groupName: groupName || undefined } }, { onSuccess: (dancer) => { setSelectedDancerId(dancer.id); setShowAddDancer(false); setSaveState('Saved'); invalidate(); } })); };
+  const editDancer = (dancer: Dancer, data: { name: string; initials: string; color: string; role: string; groupName: string | null }) => { mutateAndRefresh(() => updateDancer.mutate({ dancerId: dancer.id, data }, { onSuccess: () => { setSaveState('Saved'); invalidate(); } })); };
   const removeDancer = (id: string) => { if (!window.confirm('Remove this dancer from the project?')) return; mutateAndRefresh(() => deleteDancer.mutate({ dancerId: id }, { onSuccess: () => { setSelectedDancerId(undefined); setSaveState('Saved'); invalidate(); } })); };
   const duplicateCue = () => { if (!selectedKeyframe) return; mutateAndRefresh(() => duplicateKeyframe.mutate({ keyframeId: selectedKeyframe.id }, { onSuccess: (frame) => { setSelectedKeyframeId(frame.id); setSaveState('Saved'); invalidate(); } })); };
   const removeCue = () => { if (!selectedKeyframe || !window.confirm('Delete this cue?')) return; mutateAndRefresh(() => deleteKeyframe.mutate({ keyframeId: selectedKeyframe.id }, { onSuccess: () => { setSelectedKeyframeId(keyframes.find((frame) => frame.id !== selectedKeyframe.id)?.id ?? ''); setSaveState('Saved'); invalidate(); } })); };
@@ -419,7 +485,7 @@ function WorkspaceContent({ projects, selectedProjectId, setSelectedProjectId, o
         <ProjectRail projects={projects} selectedId={selectedProjectId} onSelect={setSelectedProjectId} onNew={onNewProject} collapsed={railCollapsed} onToggle={() => setRailCollapsed((current) => !current)} />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <Topbar project={project} onProjectSettings={() => setShowProjectSettings(true)} saveState={saveState} theme={theme} onToggleTheme={toggleTheme} />
-          <div className="flex min-h-0 flex-1 flex-col lg:flex-row"><div className="flex min-h-0 min-w-0 flex-1 flex-col"><StageBoard project={project} dancers={dancers} keyframes={keyframes} selectedKeyframe={selectedKeyframe} selectedDancerId={selectedDancerId} onSelectDancer={setSelectedDancerId} onMoveDancer={moveDancer} onCommitPosition={savePosition} gridSnap={gridSnap} setGridSnap={setGridSnap} zoom={zoom} setZoom={setZoom} pan={pan} setPan={setPan} /><Timeline keyframes={keyframes} selectedId={selectedKeyframeId} onSelect={(id) => { setSelectedKeyframeId(id); initialized.current = ''; }} onAdd={createCue} onDuplicate={duplicateCue} onDelete={removeCue} onMove={moveCue} /></div><Inspector dancers={dancers} selectedDancer={selectedDancer} onSelectDancer={setSelectedDancerId} onAddDancer={() => setShowAddDancer(true)} onUpdateDancer={editDancer} onDeleteDancer={removeDancer} project={project} onUpdateProject={updateProjectData} /></div>
+          <div className="flex min-h-0 flex-1 flex-col lg:flex-row"><div className="flex min-h-0 min-w-0 flex-1 flex-col"><StageBoard project={project} dancers={dancers} keyframes={keyframes} selectedKeyframe={selectedKeyframe} selectedDancerId={selectedDancerId} onSelectDancer={setSelectedDancerId} onMoveDancers={moveDancers} onCommitPositions={savePositions} gridSnap={gridSnap} setGridSnap={setGridSnap} zoom={zoom} setZoom={setZoom} pan={pan} setPan={setPan} /><Timeline keyframes={keyframes} selectedId={selectedKeyframeId} onSelect={(id) => { setSelectedKeyframeId(id); initialized.current = ''; }} onAdd={createCue} onDuplicate={duplicateCue} onDelete={removeCue} onMove={moveCue} /></div><Inspector dancers={dancers} selectedDancer={selectedDancer} onSelectDancer={setSelectedDancerId} onAddDancer={() => setShowAddDancer(true)} onUpdateDancer={editDancer} onDeleteDancer={removeDancer} project={project} onUpdateProject={updateProjectData} /></div>
         </div>
       </div>
       {showAddDancer && <AddDancerPanel onClose={() => setShowAddDancer(false)} onCreate={addDancer} pending={createDancer.isPending} />}

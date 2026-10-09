@@ -26,6 +26,7 @@ export const keyframesTable = pgTable("keyframes", {
   name: text("name").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
   positions: jsonb("positions").$type<Position[]>().notNull().default([]),
+  countNumber: integer("count_number"),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

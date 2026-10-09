@@ -16,6 +16,10 @@ tags:
     description: Dancer tokens belonging to a project
   - name: keyframes
     description: Formation scenes and token positions
+  - name: audio
+    description: Project audio metadata and local-file synchronization
+  - name: countAnnotations
+    description: Sketches and text cues attached to musical counts
 paths:
   /healthz:
     get:
@@ -96,6 +100,78 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /projects/{projectId}/audio-track:
+    put:
+      operationId: upsertAudioTrack
+      tags: [audio]
+      summary: Save project audio metadata
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AudioTrackInput"
+      responses:
+        "200":
+          description: Saved audio track metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AudioTrack"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteAudioTrack
+      tags: [audio]
+      summary: Remove project audio metadata
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "204":
+          description: Audio track removed
+  /projects/{projectId}/count-annotations:
+    get:
+      operationId: getCountAnnotations
+      tags: [countAnnotations]
+      summary: List project count annotations
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Count annotations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CountAnnotation"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /projects/{projectId}/count-annotations/{countNumber}:
+    put:
+      operationId: upsertCountAnnotation
+      tags: [countAnnotations]
+      summary: Save sketches and notes for a count
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/CountNumber"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CountAnnotationInput"
+      responses:
+        "200":
+          description: Saved count annotation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CountAnnotation"
         "404":
           $ref: "#/components/responses/NotFound"
   /projects/{projectId}/dancers:
@@ -271,6 +347,13 @@ components:
       schema:
         type: string
         format: uuid
+    CountNumber:
+      name: countNumber
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
   responses:
     NotFound:
       description: Resource not found
@@ -373,6 +456,8 @@ components:
           type: string
         role:
           type: ["string", "null"]
+        groupName:
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time
@@ -392,6 +477,8 @@ components:
           pattern: "^#[0-9a-fA-F]{6}$"
         role:
           type: string
+        groupName:
+          type: string
       required: [name, initials, color]
     DancerUpdate:
       type: object
@@ -408,6 +495,8 @@ components:
           pattern: "^#[0-9a-fA-F]{6}$"
         role:
           type: ["string", "null"]
+        groupName:
+          type: ["string", "null"]
     Keyframe:
       type: object
       properties:
@@ -421,6 +510,8 @@ components:
           type: string
         sortOrder:
           type: integer
+        countNumber:
+          type: ["integer", "null"]
         positions:
           type: array
           items:
@@ -433,7 +524,7 @@ components:
         updatedAt:
           type: string
           format: date-time
-      required: [id, projectId, name, sortOrder, positions, createdAt, updatedAt]
+      required: [id, projectId, name, sortOrder, positions, countNumber, createdAt, updatedAt]
     KeyframeInput:
       type: object
       properties:
@@ -444,6 +535,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Position"
+        countNumber:
+          type: integer
+          minimum: 1
         notes:
           type: string
       required: [name, positions]
@@ -457,6 +551,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Position"
+        countNumber:
+          type: ["integer", "null"]
+          minimum: 1
         notes:
           type: ["string", "null"]
     KeyframeReorderInput:
@@ -482,5 +579,122 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Keyframe"
-      required: [project, dancers, keyframes]
+        audioTrack:
+          oneOf:
+            - $ref: "#/components/schemas/AudioTrack"
+            - type: "null"
+      required: [project, dancers, keyframes, audioTrack]
+    AudioTrack:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        durationSeconds:
+          type: number
+        bpm:
+          type: number
+        startOffsetSeconds:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, projectId, fileName, durationSeconds, bpm, startOffsetSeconds, createdAt, updatedAt]
+    AudioTrackInput:
+      type: object
+      properties:
+        fileName:
+          type: string
+          minLength: 1
+        durationSeconds:
+          type: number
+          minimum: 0
+        bpm:
+          type: number
+          minimum: 30
+          maximum: 300
+        startOffsetSeconds:
+          type: number
+          minimum: 0
+      required: [fileName, durationSeconds, bpm, startOffsetSeconds]
+    AnnotationPoint:
+      type: object
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+      required: [x, y]
+    AnnotationStroke:
+      type: object
+      properties:
+        id:
+          type: string
+        tool:
+          type: string
+          enum: [pencil, highlighter]
+        color:
+          type: string
+        width:
+          type: number
+          exclusiveMinimum: 0
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnnotationPoint"
+      required: [id, tool, color, width, points]
+    AnnotationText:
+      type: object
+      properties:
+        id:
+          type: string
+        x:
+          type: number
+        y:
+          type: number
+        text:
+          type: string
+        color:
+          type: string
+      required: [id, x, y, text, color]
+    CountAnnotationData:
+      type: object
+      properties:
+        strokes:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnnotationStroke"
+        texts:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnnotationText"
+      required: [strokes, texts]
+    CountAnnotation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        countNumber:
+          type: integer
+          minimum: 1
+        data:
+          $ref: "#/components/schemas/CountAnnotationData"
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, projectId, countNumber, data, updatedAt]
+    CountAnnotationInput:
+      $ref: "#/components/schemas/CountAnnotationData"
 

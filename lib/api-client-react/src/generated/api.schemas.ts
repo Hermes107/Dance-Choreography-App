@@ -60,6 +60,8 @@ export interface Dancer {
   color: string;
   /** @nullable */
   role?: string | null;
+  /** @nullable */
+  groupName?: string | null;
   createdAt: string;
 }
 
@@ -74,6 +76,7 @@ export interface DancerInput {
   /** @pattern ^#[0-9a-fA-F]{6}$ */
   color: string;
   role?: string;
+  groupName?: string;
 }
 
 export interface DancerUpdate {
@@ -88,6 +91,8 @@ export interface DancerUpdate {
   color?: string;
   /** @nullable */
   role?: string | null;
+  /** @nullable */
+  groupName?: string | null;
 }
 
 export interface Keyframe {
@@ -95,6 +100,8 @@ export interface Keyframe {
   projectId: string;
   name: string;
   sortOrder: number;
+  /** @nullable */
+  countNumber: number | null;
   positions: Position[];
   /** @nullable */
   notes?: string | null;
@@ -106,6 +113,8 @@ export interface KeyframeInput {
   /** @minLength 1 */
   name: string;
   positions: Position[];
+  /** @minimum 1 */
+  countNumber?: number;
   notes?: string;
 }
 
@@ -113,6 +122,11 @@ export interface KeyframeUpdate {
   /** @minLength 1 */
   name?: string;
   positions?: Position[];
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  countNumber?: number | null;
   /** @nullable */
   notes?: string | null;
 }
@@ -122,11 +136,83 @@ export interface KeyframeReorderInput {
   keyframeIds: string[];
 }
 
+export interface AudioTrack {
+  id: string;
+  projectId: string;
+  fileName: string;
+  durationSeconds: number;
+  bpm: number;
+  startOffsetSeconds: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ProjectWorkspace {
   project: Project;
   dancers: Dancer[];
   keyframes: Keyframe[];
+  audioTrack: AudioTrack | null;
 }
+
+export interface AudioTrackInput {
+  /** @minLength 1 */
+  fileName: string;
+  /** @minimum 0 */
+  durationSeconds: number;
+  /**
+     * @minimum 30
+     * @maximum 300
+     */
+  bpm: number;
+  /** @minimum 0 */
+  startOffsetSeconds: number;
+}
+
+export interface AnnotationPoint {
+  x: number;
+  y: number;
+}
+
+export type AnnotationStrokeTool = typeof AnnotationStrokeTool[keyof typeof AnnotationStrokeTool];
+
+
+export const AnnotationStrokeTool = {
+  pencil: 'pencil',
+  highlighter: 'highlighter',
+} as const;
+
+export interface AnnotationStroke {
+  id: string;
+  tool: AnnotationStrokeTool;
+  color: string;
+  /** @exclusiveMinimum 0 */
+  width: number;
+  points: AnnotationPoint[];
+}
+
+export interface AnnotationText {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  color: string;
+}
+
+export interface CountAnnotationData {
+  strokes: AnnotationStroke[];
+  texts: AnnotationText[];
+}
+
+export interface CountAnnotation {
+  id: string;
+  projectId: string;
+  /** @minimum 1 */
+  countNumber: number;
+  data: CountAnnotationData;
+  updatedAt: string;
+}
+
+export type CountAnnotationInput = CountAnnotationData;
 
 /**
  * Resource not found

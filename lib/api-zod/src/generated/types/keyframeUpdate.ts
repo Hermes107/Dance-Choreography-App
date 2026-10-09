@@ -11,6 +11,11 @@ export interface KeyframeUpdate {
   /** @minLength 1 */
   name?: string;
   positions?: Position[];
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  countNumber?: number | null;
   /** @nullable */
   notes?: string | null;
 }

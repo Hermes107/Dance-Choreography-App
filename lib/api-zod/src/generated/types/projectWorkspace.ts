@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { AudioTrack } from './audioTrack';
 import type { Dancer } from './dancer';
 import type { Keyframe } from './keyframe';
 import type { Project } from './project';
@@ -13,4 +14,5 @@ export interface ProjectWorkspace {
   project: Project;
   dancers: Dancer[];
   keyframes: Keyframe[];
+  audioTrack: AudioTrack | null;
 }
