@@ -135,8 +135,10 @@
 }
 
 @layer utilities {
+  .stage-surroundings { background: #f4f1ea; }
+  .dark .stage-surroundings { background: #12141c; }
   .stage-grid {
-    background-color: #22263b;
+    background-color: #1e2230;
     background-image:
       linear-gradient(rgba(221, 226, 216, .075) 1px, transparent 1px),
       linear-gradient(90deg, rgba(221, 226, 216, .075) 1px, transparent 1px),

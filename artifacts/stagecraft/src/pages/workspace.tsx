@@ -11,14 +11,18 @@ import {
   Crosshair,
   Grid3X3,
   Layers3,
+  Menu,
+  Moon,
   Minus,
   Move,
   PanelRight,
   Plus,
+  RotateCcw,
   Save,
   Settings2,
   SlidersHorizontal,
   Sparkles,
+  Sun,
   Trash2,
   UserRoundPlus,
   ZoomIn,
@@ -143,32 +147,50 @@ function Mark() {
   return <div aria-label="Stagecraft mark" className="relative grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground"><span className="absolute h-4 w-px rotate-45 bg-primary-foreground" /><span className="absolute h-4 w-px -rotate-45 bg-primary-foreground" /><span className="relative h-1.5 w-1.5 rounded-full bg-primary-foreground" /></div>;
 }
 
-function ProjectRail({ projects, selectedId, onSelect, onNew }: { projects: Project[]; selectedId: string; onSelect: (id: string) => void; onNew: () => void }) {
+function ProjectRail({ projects, selectedId, onSelect, onNew, collapsed, onToggle }: { projects: Project[]; selectedId: string; onSelect: (id: string) => void; onNew: () => void; collapsed: boolean; onToggle: () => void }) {
   return (
-    <aside className="flex min-h-[100dvh] flex-col bg-sidebar px-4 py-5 text-sidebar-foreground lg:min-h-0 lg:rounded-xl">
-      <div className="flex items-center gap-3 px-2"><Mark /><div><div className="text-sm font-semibold tracking-tight">Stagecraft</div><div className="font-mono text-[9px] uppercase tracking-[.18em] text-sidebar-foreground/50">Rehearsal desk</div></div></div>
-      <div className="mt-9 flex items-center justify-between px-2"><span className="font-mono text-[10px] uppercase tracking-[.16em] text-sidebar-foreground/45">Projects</span><IconButton label="new project" data-testid="button-new-project" onClick={onNew} className="h-7 w-7 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"><Plus size={15} /></IconButton></div>
-      <nav className="mt-3 grid gap-1">
+    <aside className={`flex h-16 min-h-0 w-full flex-row items-center bg-sidebar px-3 py-3 text-sidebar-foreground transition-[width,padding] duration-200 lg:h-auto lg:flex-col lg:rounded-xl ${collapsed ? 'lg:w-[68px] lg:items-center lg:px-2' : 'lg:px-4'}`}>
+      <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : 'px-2'}`}>
+        <Mark />
+        {!collapsed && <div><div className="text-sm font-semibold tracking-tight">Stagecraft</div><div className="font-mono text-[9px] uppercase tracking-[.18em] text-sidebar-foreground/50">Rehearsal desk</div></div>}
+      </div>
+      <div className={`ml-auto flex items-center gap-1 lg:ml-0 lg:mt-9 ${collapsed ? 'lg:flex-col' : 'justify-between lg:px-2'}`}>
+        {!collapsed && <span className="font-mono text-[10px] uppercase tracking-[.16em] text-sidebar-foreground/45">Projects</span>}
+        <div className="flex items-center gap-1">
+          <IconButton label={collapsed ? 'expand projects' : 'collapse projects'} data-testid="button-toggle-project-rail" onClick={onToggle} className="h-7 w-7 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"><Menu size={15} /></IconButton>
+          <IconButton label="new project" data-testid="button-new-project" onClick={onNew} className="h-7 w-7 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"><Plus size={15} /></IconButton>
+        </div>
+      </div>
+      <nav className={`mt-3 hidden gap-1 lg:grid ${collapsed ? 'w-full' : ''}`}>
         {projects.map((project) => (
-          <button key={project.id} data-testid={`button-project-${project.id}`} onClick={() => onSelect(project.id)} className={`group grid grid-cols-[7px_1fr] items-center gap-3 rounded-lg px-2.5 py-3 text-left transition-colors ${selectedId === project.id ? 'bg-sidebar-accent text-sidebar-foreground' : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground'}`}>
-            <span className={`h-7 rounded-full ${selectedId === project.id ? 'bg-sidebar-primary' : 'bg-sidebar-foreground/20'}`} />
-            <span className="min-w-0"><span className="block truncate text-sm font-medium">{project.name}</span><span className="mt-0.5 block font-mono text-[10px] text-sidebar-foreground/40">{project.stageWidth} × {project.stageHeight}</span></span>
+          <button title={`${project.name} — ${project.stageWidth} × ${project.stageHeight}`} key={project.id} data-testid={`button-project-${project.id}`} onClick={() => onSelect(project.id)} className={`group grid items-center rounded-lg text-left transition-colors ${collapsed ? 'mx-auto h-10 w-10 place-items-center' : 'grid-cols-[7px_1fr] gap-3 px-2.5 py-3'} ${selectedId === project.id ? 'bg-sidebar-accent text-sidebar-foreground' : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground'}`}>
+            <span className={`rounded-full ${collapsed ? 'h-3 w-3' : 'h-7'} ${selectedId === project.id ? 'bg-sidebar-primary' : 'bg-sidebar-foreground/20'}`} />
+            {!collapsed && <span className="min-w-0"><span className="block truncate text-sm font-medium">{project.name}</span><span className="mt-0.5 block font-mono text-[10px] text-sidebar-foreground/40">{project.stageWidth} × {project.stageHeight}</span></span>}
           </button>
         ))}
       </nav>
-      <div className="mt-auto border-t border-sidebar-border pt-4">
+      {!collapsed && <div className="mt-auto border-t border-sidebar-border pt-4">
         <div className="flex items-center gap-2 px-2 text-sidebar-foreground/45"><CircleHelp size={15} /><span className="text-xs">Drag tokens to compose</span></div>
-        <div className="mt-3 flex items-center gap-2 rounded-lg bg-sidebar-accent px-2.5 py-2.5"><div className="grid h-7 w-7 place-items-center rounded-md bg-secondary text-xs font-semibold text-secondary-foreground">MP</div><div className="min-w-0"><div className="truncate text-xs font-medium">Mara Pineda</div><div className="font-mono text-[9px] uppercase tracking-wider text-sidebar-foreground/40">Choreographer</div></div></div>
-      </div>
+      </div>}
+      {collapsed && <div className="mt-auto text-sidebar-foreground/45"><CircleHelp size={15} /></div>}
     </aside>
   );
 }
 
-function Topbar({ project, onProjectSettings, saveState }: { project: Project; onProjectSettings: () => void; saveState: string }) {
+function Topbar({ project, onProjectSettings, saveState, theme, onToggleTheme }: { project: Project; onProjectSettings: () => void; saveState: string; theme: 'light' | 'dark'; onToggleTheme: () => void }) {
   return (
     <header className="flex min-h-[58px] items-center justify-between gap-3 border-b border-border px-4 sm:px-6">
-      <div className="flex min-w-0 items-center gap-3"><span className="font-mono text-[10px] uppercase tracking-[.16em] text-muted-foreground">Workspace</span><ChevronRight size={13} className="text-muted-foreground/60" /><h1 data-testid="text-project-name" className="truncate text-sm font-semibold">{project.name}</h1></div>
-      <div className="flex items-center gap-2"><span data-testid="status-save" className="hidden items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground sm:flex"><span className={`h-1.5 w-1.5 rounded-full ${saveState === 'Saved' ? 'bg-[#72a979]' : 'bg-primary'}`} />{saveState}</span><IconButton label="project settings" data-testid="button-project-settings" onClick={onProjectSettings}><Settings2 size={17} /></IconButton></div>
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="hidden items-center gap-2.5 sm:flex"><Mark /><div className="leading-none"><div className="text-xs font-semibold tracking-tight">Stagecraft</div><div className="mt-1 font-mono text-[8px] uppercase tracking-[.18em] text-muted-foreground">Rehearsal desk</div></div></div>
+        <ChevronRight size={13} className="text-muted-foreground/60" />
+        <span className="font-mono text-[10px] uppercase tracking-[.16em] text-muted-foreground">Workspace</span><ChevronRight size={13} className="text-muted-foreground/60" /><h1 data-testid="text-project-name" className="truncate text-sm font-semibold">{project.name}</h1>
+      </div>
+      <div className="flex items-center gap-2">
+        <span data-testid="status-save" className="hidden items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground sm:flex"><span className={`h-1.5 w-1.5 rounded-full ${saveState === 'Saved' ? 'bg-[#72a979]' : 'bg-primary'}`} />{saveState}</span>
+        <div className="hidden items-center gap-2 sm:flex"><div className="grid h-7 w-7 place-items-center rounded-md bg-secondary text-[10px] font-semibold text-secondary-foreground">MP</div><span className="hidden text-xs font-medium xl:block">Mara Pineda</span></div>
+        <IconButton label={theme === 'light' ? 'switch to dark mode' : 'switch to light mode'} data-testid="button-toggle-theme" onClick={onToggleTheme} className="border border-border">{theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}</IconButton>
+        <IconButton label="project settings" data-testid="button-project-settings" onClick={onProjectSettings}><Settings2 size={17} /></IconButton>
+      </div>
     </header>
   );
 }
@@ -215,13 +237,15 @@ function StageBoard({ project, dancers, keyframes, selectedKeyframe, onSelectDan
   };
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col bg-[#e8e4da]">
+    <section className="stage-surroundings flex min-h-0 flex-1 flex-col">
       <div className="flex items-center justify-between border-b border-border/80 px-4 py-3 sm:px-6">
         <div><div className="flex items-center gap-2 text-xs font-semibold"><Crosshair size={14} className="text-primary" /> Stage view</div><div className="mt-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{project.stageWidth} × {project.stageHeight} / {project.gridSize}px grid</div></div>
         <div className="flex items-center gap-1 rounded-lg border border-border bg-card/70 p-1">
           <IconButton label="zoom out" data-testid="button-zoom-out" onClick={() => setZoom(Math.max(.65, Number((zoom - .1).toFixed(2))))}><ZoomOut size={15} /></IconButton>
           <span data-testid="text-zoom" className="w-12 text-center font-mono text-[10px] text-muted-foreground">{Math.round(zoom * 100)}%</span>
           <IconButton label="zoom in" data-testid="button-zoom-in" onClick={() => setZoom(Math.min(1.5, Number((zoom + .1).toFixed(2))))}><ZoomIn size={15} /></IconButton>
+          <span className="mx-1 h-5 w-px bg-border" />
+          <IconButton label="reset view" data-testid="button-reset-view" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}><RotateCcw size={15} /></IconButton>
           <span className="mx-1 h-5 w-px bg-border" />
           <IconButton label="toggle paths" data-testid="button-toggle-paths" onClick={() => setShowPaths(!showPaths)} className={showPaths ? 'bg-secondary/70 text-foreground' : ''}><Move size={15} /></IconButton>
         </div>
@@ -335,6 +359,8 @@ export default function Workspace() {
 
 function WorkspaceContent({ projects, selectedProjectId, setSelectedProjectId, onNewProject, showAddDancer, setShowAddDancer, showProjectSettings, setShowProjectSettings }: { projects: Project[]; selectedProjectId: string; setSelectedProjectId: (id: string) => void; onNewProject: () => void; showAddDancer: boolean; setShowAddDancer: (value: boolean) => void; showProjectSettings: boolean; setShowProjectSettings: (value: boolean) => void }) {
   const queryClient = useQueryClient();
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => (localStorage.getItem('stagecraft-theme') as 'light' | 'dark' | null) ?? 'light');
+  const [railCollapsed, setRailCollapsed] = useState(projects.length <= 1);
   const query = useGetProject(selectedProjectId, { query: { queryKey: getGetProjectQueryKey(selectedProjectId), enabled: Boolean(selectedProjectId) } });
   const project = query.data?.project;
   const dancers = query.data?.dancers ?? [];
@@ -382,12 +408,17 @@ function WorkspaceContent({ projects, selectedProjectId, setSelectedProjectId, o
   const removeCue = () => { if (!selectedKeyframe || !window.confirm('Delete this cue?')) return; mutateAndRefresh(() => deleteKeyframe.mutate({ keyframeId: selectedKeyframe.id }, { onSuccess: () => { setSelectedKeyframeId(keyframes.find((frame) => frame.id !== selectedKeyframe.id)?.id ?? ''); setSaveState('Saved'); invalidate(); } })); };
   const moveCue = (direction: 'up' | 'down') => { if (!selectedKeyframe) return; const index = keyframes.findIndex((frame) => frame.id === selectedKeyframe.id); const target = direction === 'up' ? index - 1 : index + 1; if (target < 0 || target >= keyframes.length) return; const ids = keyframes.map((frame) => frame.id); [ids[index], ids[target]] = [ids[target], ids[index]]; mutateAndRefresh(() => reorderKeyframes.mutate({ projectId: selectedProjectId, data: { keyframeIds: ids } }, { onSuccess: () => { setSaveState('Saved'); invalidate(); } })); };
 
+  const toggleTheme = () => setTheme((current) => {
+    const next = current === 'light' ? 'dark' : 'light';
+    localStorage.setItem('stagecraft-theme', next);
+    return next;
+  });
   return (
-    <main className="noise min-h-[100dvh] bg-background p-0 text-foreground lg:p-4">
-      <div className="mx-auto flex min-h-[100dvh] max-w-[1650px] flex-col overflow-hidden rounded-none border-border bg-card lg:grid lg:min-h-[calc(100dvh-2rem)] lg:grid-cols-[230px_minmax(0,1fr)] lg:border lg:shadow-lg">
-        <ProjectRail projects={projects} selectedId={selectedProjectId} onSelect={setSelectedProjectId} onNew={onNewProject} />
+    <main className={`noise min-h-[100dvh] bg-background p-0 text-foreground lg:p-4 ${theme === 'dark' ? 'dark' : ''}`}>
+      <div className="mx-auto flex min-h-[100dvh] max-w-[1650px] flex-col overflow-hidden rounded-none border-border bg-card lg:grid lg:min-h-[calc(100dvh-2rem)] lg:grid-cols-[auto_minmax(0,1fr)] lg:border lg:shadow-lg">
+        <ProjectRail projects={projects} selectedId={selectedProjectId} onSelect={setSelectedProjectId} onNew={onNewProject} collapsed={railCollapsed} onToggle={() => setRailCollapsed((current) => !current)} />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <Topbar project={project} onProjectSettings={() => setShowProjectSettings(true)} saveState={saveState} />
+          <Topbar project={project} onProjectSettings={() => setShowProjectSettings(true)} saveState={saveState} theme={theme} onToggleTheme={toggleTheme} />
           <div className="flex min-h-0 flex-1 flex-col lg:flex-row"><div className="flex min-h-0 min-w-0 flex-1 flex-col"><StageBoard project={project} dancers={dancers} keyframes={keyframes} selectedKeyframe={selectedKeyframe} selectedDancerId={selectedDancerId} onSelectDancer={setSelectedDancerId} onMoveDancer={moveDancer} onCommitPosition={savePosition} gridSnap={gridSnap} setGridSnap={setGridSnap} zoom={zoom} setZoom={setZoom} pan={pan} setPan={setPan} /><Timeline keyframes={keyframes} selectedId={selectedKeyframeId} onSelect={(id) => { setSelectedKeyframeId(id); initialized.current = ''; }} onAdd={createCue} onDuplicate={duplicateCue} onDelete={removeCue} onMove={moveCue} /></div><Inspector dancers={dancers} selectedDancer={selectedDancer} onSelectDancer={setSelectedDancerId} onAddDancer={() => setShowAddDancer(true)} onUpdateDancer={editDancer} onDeleteDancer={removeDancer} project={project} onUpdateProject={updateProjectData} /></div>
         </div>
       </div>

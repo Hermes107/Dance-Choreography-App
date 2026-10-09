@@ -1,0 +1,50 @@
+Apply the following UI updates and visual refinements to the Milestone 1 implementation of Stagecraft.
+
+---
+
+### 1. SIDEBAR & LAYOUT OPTIMIZATION
+* **Compact Projects Navigation:** Replace the current full-height, wide left sidebar with a collapsible side navigation bar or top dropdown project selector (e.g., displaying "Neon Drift — 1200x800"). 
+* **Minimize Wasted Space:** Ensure that when a user only has 1 active project, the navigation auto-collapses or takes up minimal horizontal space so the central stage canvas gets maximum screen real estate.
+
+---
+
+### 2. THEME SYSTEM (DARK / LIGHT MODE)
+* **Global Theme Toggle:** Add a Dark/Light mode toggle switch in the top header navbar next to the user profile and "SAVED" indicator.
+* **Light Theme Styling:**
+  * Workspace Surroundings: Warm off-white / light cream (`#F4F1EA`).
+  * Panels & Inspector: Clean light background with crisp slate borders.
+  * Stage Canvas Grid: Dark navy/slate workspace (`#1E2230`) to keep high contrast for stage light visuals.
+* **Dark Theme Styling:**
+  * Workspace Surroundings: Deep slate/charcoal (`#12141C`).
+  * Panels & Inspector: Dark slate cards with high-contrast light typography.
+
+---
+
+### 3. INTERFACE & PANEL REFINEMENTS (BASED ON MOCKUP)
+
+#### A. Header Bar
+* Update breadcrumbs: `WORKSPACE > [Active Project Name]`.
+* Display "Stagecraft REHEARSAL DESK" branding on the top-left.
+
+#### B. Stage Viewport
+* Add overlay labels: "UPSTAGE" across the top margin and "DOWNSTAGE" across the bottom margin.
+* Floating Control Overlays:
+  * Top-Right: Zoom & Pan toolbar (`-`, percentage display, `+`, reset view icon).
+  * Bottom-Left: Floating "SNAP" grid toggle switch.
+* Top-left canvas badge showing stage scene metadata (e.g., `STAGE / Opening picture`).
+
+#### C. Right Inspector Panel
+* **Ensemble List Section:** Compact list displaying dancer color badges, names, and roles (e.g., "AR - Ari - LEAD", "BE - Bea - SUPPORT").
+* **Token Details Card:**
+  * Pre-fill selected token properties (Initials, Name, Accent Color Picker, Role/Note field).
+  * Action buttons: "Save token" (accent colored) and Trash icon for deletion.
+* **Project Notes Card:** Bottom card with a multi-line textarea for rehearsal notes and a "Save project note" button.
+
+#### D. Bottom Cue Timeline
+* Display choreographer tag in the bottom-left corner (`[Avatar] Mara Pineda - CHOREOGRAPHER`).
+* Horizontal scrollable sequence of cue cards showing cue number, title, and mark counts (e.g., `#01 Opening picture - 4 MARKS`).
+* Timeline controls: "+ Add cue", "Duplicate", Delete icon, and step navigation arrows (`←` / `→`).
+
+---
+
+Please update the project files with these layout adjustments and theme toggling capabilities while keeping all core token dragging and keyframing state intact.
